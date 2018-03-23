@@ -131,7 +131,7 @@ ui <- pageWithSidebar(
     textInput('sd_sdai', 'SDAI Std Dev', value = sprintf('%.2f', sd_sdai)),
     HTML('<p style="position: fixed; bottom: 0; width:30%; text-align: justify">
 This work was supported by the Intramural Research Program of the National Institute of Arthritis,
-         Musculoskeletal and Skin Disorders, National Institutes of Health, Bethesda, Maryland. This work is in the public domain.
+         Musculoskeletal and Skin Diseases, National Institutes of Health, Bethesda, Maryland. This work is in the public domain.
          </p>')
     
   ),
