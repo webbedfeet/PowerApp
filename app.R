@@ -4,6 +4,7 @@ library(purrr)
 library(pwr)
 library(TrialSize)
 library(cowplot)
+library(markdown)
 load('data/rda/finaldat.rda')
 
 sd_das <- sd(dat$dasesrdiff, na.rm=T)
@@ -27,7 +28,7 @@ find_margin_prop <- function(x, N, p1, alpha = 0.05, pwr = 0.8, delta=0 ){
 
 server <- function(input, output, session){
   output$ssize <- renderTable({
-    n_vec <- seq(input$n[1], input$n[2], by = 10)
+    n_vec <- seq(input$n[1], input$n[2], by = 25)
      pwr <- as.numeric(input$power)
      tab1 <- data.frame(N = n_vec, power = pwr)
      tab1 <- tab1 %>% 
@@ -43,13 +44,13 @@ server <- function(input, output, session){
        mutate(delta_acr20 = p1_acr20 - p0_acr20, delta_acr50 = p1_acr50 - p0_acr50) %>%
        select(N,  delta_das:p0_acr20, p1_acr20,   p0_acr50, p1_acr50) %>% 
        round(digits = 2) %>% 
-       setNames(c('N', 'DAS','SDAI','ACR20 p0', 'ACR20 p1', 'ACR50 p0', 'ACR50 p1')) %>% 
+       setNames(c('N', 'DAS28','SDAI','ACR20 p0', 'ACR20 p1', 'ACR50 p0', 'ACR50 p1')) %>% 
        mutate(N = as.integer(N))
      tab1
     })
   
   output$noninf <- renderTable({
-    tab2 <- tibble(N = seq(input$n[1], input$n[2], by = 10),
+    tab2 <- tibble(N = seq(input$n[1], input$n[2], by = 25),
                    pwr = as.numeric(input$power)) %>% 
       mutate(margin_ACR20 = map2_dbl(N, pwr, 
                                      ~uniroot(find_margin_prop, c(-0.5,-0.005), N=.x, 
@@ -65,7 +66,7 @@ server <- function(input, output, session){
                                              N = .x, stdev=as.numeric(input$sd_sdai), pwr=.y)$root),
              N = as.integer(N)) %>% 
       select(-pwr) %>% 
-      setNames(c('N','ACR20','ACR50','DAS','SDAI'))
+      setNames(c('N','ACR20','ACR50','DAS28','SDAI'))
     tab2
   })
   
@@ -86,7 +87,7 @@ server <- function(input, output, session){
     
     plt_das <- ggplot(d_plot, aes(x=Delta_DAS, y = Delta, group=factor(p0), color=factor(p0)))+
       geom_line()+
-      scale_x_continuous(expression(Delta[DAS]))+
+      scale_x_continuous(expression(Delta[DAS28]))+
       scale_y_continuous(expression(Delta[ACR20]))+
       labs(color=expression(p[0]))
     
@@ -104,7 +105,7 @@ server <- function(input, output, session){
                    plt_sdai+theme(legend.position='none'),
                    rel_widths = c(1,1),
                    align='h', 
-                   labels = c('A','B'), 
+                   labels = c('ACR20 vs DAS28','ACR20 vs SDAI'), 
                    hjust = -1,
                    nrow=1)
     p1 <- plot_grid(p, legend_b, ncol=1, rel_heights = c(1,.2))
@@ -120,23 +121,25 @@ server <- function(input, output, session){
 ui <- pageWithSidebar(
   headerPanel("Equivalence of different RA responses"),
   sidebarPanel(
-    sliderInput("n", "N", min = 10, max = 200, 
-                value = c(50,100), step = 10),
+    sliderInput("n", "N", min = 0, max = 500, 
+                value = c(50,300), step = 25),
     radioButtons('power', "Power", choiceNames = paste0(c(80,90), '%'), choiceValues = c(0.8, 0.9)),
     HTML('<hr>'),
     sliderInput('p0_20', 'Baseline ACR20 %', value=0.5, min = 0.05, max = 0.95, step=0.05),
     sliderInput('p0_50', 'Baseline ACR50 %', value = 0.2, min = 0.05, max = 0.95, step = 0.05),
     HTML('<hr>'),
-    textInput('sd_das', 'DAS Std Dev', value = sprintf('%.2f', sd_das)),
+    textInput('sd_das', 'DAS28 Std Dev', value = sprintf('%.2f', sd_das)),
     textInput('sd_sdai', 'SDAI Std Dev', value = sprintf('%.2f', sd_sdai)),
-    HTML('<p style="position: fixed; bottom: 0; width:30%; text-align: justify">
+    HTML('<p style="position: fixed; bottom: 0; width:25%; text-align: justify">
 This work was supported by the Intramural Research Program of the National Institute of Arthritis,
-         Musculoskeletal and Skin Disorders, National Institutes of Health, Bethesda, Maryland. This work is in the public domain.
+         Musculoskeletal and Skin Diseases, National Institutes of Health, Bethesda, Maryland. This work is in the public domain.
          </p>')
     
   ),
   mainPanel(
     tabsetPanel(id = 'test',
+                tabPanel('About',includeMarkdown('about.md')
+                ),
                 tabPanel('Superiority', h4("Detectable differences"),
                          # textOutput('test')#,
                          tableOutput('ssize'),
@@ -145,11 +148,8 @@ This work was supported by the Intramural Research Program of the National Insti
                 
                 tabPanel('Non-inferiority',
                          h4("Required non-inferiority margins when there is truly no difference"),
-                         tableOutput('noninf')),
+                         tableOutput('noninf'))
                 
-                tabPanel('About', h4('Basis for this app'),
-                         textOutput('about')
-                         )
     )
 )
 )
